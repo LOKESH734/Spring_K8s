@@ -1,14 +1,20 @@
-# Use official Java 17 base image
-FROM openjdk:17-jdk
 
-# Set working directory
+# -------- BUILD STAGE --------
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy your jar file into container and rename it
-COPY target/realWordJob-0.0.1-SNAPSHOT.jar /app/dockerdemo.jar
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Expose Spring Boot port
-EXPOSE 8080
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-# Run the app
-CMD ["java", "-jar", "/app/dockerdemo.jar"]
+# -------- RUNTIME STAGE --------
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+COPY --from=build /app/target/*.jar app.jar
+
+EXPOSE 8086
+
+ENTRYPOINT ["java","-jar","app.jar"]

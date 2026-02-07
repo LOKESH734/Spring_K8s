@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 @EnableWebSecurity
@@ -24,11 +25,17 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
-                .csrf(csrf -> csrf.disable()) // ✅ Disable CSRF for stateless APIs
-                .cors(cors -> {}) // ✅ Enable CORS (customize if needed)
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})   // ✅ enable CORS
+
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Allow Swagger & OpenAPI endpoints
+
+                        // ✅ ALLOW PREFLIGHT (🔥 THIS WAS MISSING 🔥)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ✅ Swagger
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -38,22 +45,32 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // ✅ Public endpoints
+                        // ✅ Actuator
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/info"
+                        ).permitAll()
+
+                        // ✅ Auth APIs
                         .requestMatchers("/auth/**").permitAll()
-                        // ✅ All other requests require authentication
+
+                        // 🔒 Everything else
                         .anyRequest().authenticated()
                 )
-                // ✅ Stateless session (because of JWT)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // ✅ Add JWT filter before UsernamePasswordAuthenticationFilter
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                );
+
+        // JWT filter
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(
+            AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 

@@ -24,12 +24,21 @@ public class JwtFilter extends OncePerRequestFilter {
     private CustomUserDetailsService service;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain
+    ) throws ServletException, IOException {
+
+        // 🔥🔥🔥 CRITICAL FIX: allow CORS preflight 🔥🔥🔥
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         String path = request.getRequestURI();
 
-        // ✅ Allow public and Swagger paths without JWT check
+        // ✅ Allow public & swagger paths
         if (path.startsWith("/auth/")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/v3/api-docs")
@@ -52,13 +61,23 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (email != null &&
+                SecurityContextHolder.getContext().getAuthentication() == null) {
+
             UserDetails userDetails = service.loadUserByUsername(email);
 
             if (jwtUtil.validateToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }

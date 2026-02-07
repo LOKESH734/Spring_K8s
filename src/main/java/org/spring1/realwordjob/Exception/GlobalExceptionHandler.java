@@ -1,22 +1,27 @@
-package org.spring1.realwordjob.Exception;
+package org.spring1.realwordjob.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import org.springframework.http.*;
-        import org.springframework.web.bind.annotation.*;
-        import org.springframework.web.context.request.WebRequest;
+import java.util.Map;
 
-import java.util.Date;
-
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Handle all general exceptions
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGlobalException(Exception ex, WebRequest request) {
-        ErrorDetails errorDetails = new ErrorDetails(
-                new Date(), ex.getMessage(), request.getDescription(false));
-        return new ResponseEntity<>(errorDetails, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    private static final Logger log =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // Add more specific exceptions if needed (e.g., ResourceNotFoundException)
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex) {
+
+        log.error("Unhandled exception occurred", ex);
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal Server Error"));
+    }
 }
